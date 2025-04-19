@@ -1,18 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <string.h>4
+#include <string.h>
 
-#include "lexerf.h";
+#include "lexerf.h"
+#include"parserf.h"
 
-int main(){
+int main(int argc, char *argv[]){
+    if(argc < 2){
+        printf("Error: correct syntax: ./%s <filename.el>\n", argv[0]);
+        exit(1);
+    }
     FILE *file;
-    file = fopen("test.el", "r");
+    file = fopen(argv[1], "r");
+    if(!file){
+        printf("Error: File not found\n");
+        exit(1);
+    }
     Token *tokens = lexer(file);
 
-    /*for(size_t i = 0; tokens[i].type!= END_OF_TOKENS ; i++){
-        printf("%p\n", tokens[i].value);
+    for(size_t i = 0; tokens[i].type!= END_OF_TOKENS ; i++){
+        /*printf("%p\n", tokens[i].value);*/
         print_token(tokens[i]);
-    }*/
-    return 0;
+    }
+
+    parser(tokens);
 }
