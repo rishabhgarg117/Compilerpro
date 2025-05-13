@@ -1,12 +1,11 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
-typedef struct Node
-{
-    char *value;
-    TokenType type;
-    struct Node *right;
-    struct Node *left;
+typedef struct Node{
+  char *value;
+  TokenType type;
+  struct Node *right;
+  struct Node *left;
 } Node;
 
 Node *parser(Token *tokens);
