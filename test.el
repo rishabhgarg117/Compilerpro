@@ -1,4 +1,3 @@
-
 {
   int scopeagain = 12;
   int again = 11;
@@ -8,4 +7,4 @@
 int x = 10;
 int y = 3;
 int hal = 2;
-exit(scopeagain);
+exit(again);
