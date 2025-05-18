@@ -1,1 +1,5 @@
-exit(2 * 8 + 2);
+int myvar = 15;
+int y = 10;
+int x = 12;
+int z = 99;
+exit(z);
