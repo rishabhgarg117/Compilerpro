@@ -1,5 +1,11 @@
-int myvar = 15;
-int y = 10;
-int x = 12;
-int z = 99;
-exit(z);
+
+{
+  int scopeagain = 12;
+  int again = 11;
+  int laksdl = 12;
+}
+
+int x = 10;
+int y = 3;
+int hal = 2;
+exit(scopeagain);

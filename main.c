@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
   {
     print_token(tokens[i]);
   }
+
   Node *test = parser(tokens);
 
   generate_code(test);

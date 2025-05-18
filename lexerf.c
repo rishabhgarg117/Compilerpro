@@ -169,6 +169,18 @@ Token *lexer(FILE *file)
       tokens[tokens_index] = *token;
       tokens_index++;
     }
+    else if (current[current_index] == '{')
+    {
+      token = generate_separator_or_operator(current, &current_index, SEPARATOR);
+      tokens[tokens_index] = *token;
+      tokens_index++;
+    }
+    else if (current[current_index] == '}')
+    {
+      token = generate_separator_or_operator(current, &current_index, SEPARATOR);
+      tokens[tokens_index] = *token;
+      tokens_index++;
+    }
     else if (current[current_index] == '=')
     {
       token = generate_separator_or_operator(current, &current_index, OPERATOR);
