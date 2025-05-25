@@ -5,22 +5,53 @@
 
 #include "lexerf.h"
 
-typedef struct Node {
+#define MAX_CURLY_STACK_LENGTH 64
+
+typedef struct Node
+{
   char *value;
   TokenType type;
   struct Node *right;
   struct Node *left;
 } Node;
 
-void print_tree(Node *node, int indent, char *identifier){
-  if(node == NULL){
+typedef struct
+{
+  Node *content[MAX_CURLY_STACK_LENGTH];
+  int top;
+} curly_stack;
+
+Node *peek_curly(curly_stack *stack)
+{
+  return stack->content[stack->top];
+}
+
+void push_curly(curly_stack *stack, Node *element)
+{
+  stack->top++;
+  stack->content[stack->top] = element;
+}
+
+Node *pop_curly(curly_stack *stack)
+{
+  Node *result = stack->content[stack->top];
+  stack->top--;
+  return result;
+}
+
+void print_tree(Node *node, int indent, char *identifier)
+{
+  if (node == NULL)
+  {
     return;
   }
-  for(int i = 0; i < indent; i++){
+  for (int i = 0; i < indent; i++)
+  {
     printf(" ");
   }
   printf("%s -> ", identifier);
-  for(size_t i = 0; node->value[i] != '\0'; i++){
+  for (size_t i = 0; node->value[i] != '\0'; i++)
+  {
     printf("%c", node->value[i]);
   }
   printf("\n");
@@ -28,7 +59,8 @@ void print_tree(Node *node, int indent, char *identifier){
   print_tree(node->right, indent + 1, "right");
 }
 
-Node *init_node(Node *node, char *value, TokenType type){
+Node *init_node(Node *node, char *value, TokenType type)
+{
   node = malloc(sizeof(Node));
   node->value = malloc(sizeof(char) * 2);
   node->type = (int)type;
@@ -38,149 +70,203 @@ Node *init_node(Node *node, char *value, TokenType type){
   return node;
 }
 
-void print_error(char *error_type){
-  printf("ERROR: %s\n", error_type);
+void print_error(char *error_type, size_t line_number)
+{
+  printf("ERROR: %s on line number: %zu\n", error_type, line_number);
   exit(1);
 }
 
-Token *generate_operation_nodes(Token *current_token, Node *current_node){
+Node *parse_expression(Token *current_token, Node *current_node)
+{
+  Node *expr_node = malloc(sizeof(Node));
+  expr_node = init_node(expr_node, current_token->value, current_token->type);
+  current_token++;
+  if (current_token->type != OPERATOR)
+  {
+    return expr_node;
+  }
+  return expr_node;
+}
+
+Token *generate_operation_nodes(Token *current_token, Node *current_node)
+{
   Node *oper_node = malloc(sizeof(Node));
   oper_node = init_node(oper_node, current_token->value, OPERATOR);
   current_node->left->left = oper_node;
   current_node = oper_node;
-  printf("CURRENT TOKEN 1: %s\n", current_token->value);
   current_token--;
-  if(current_token->type == INT){
+  if (current_token->type == INT)
+  {
     Node *expr_node = malloc(sizeof(Node));
     expr_node = init_node(expr_node, current_token->value, INT);
     current_node->left = expr_node;
-  } else if(current_token->type == IDENTIFIER){
+  }
+  else if (current_token->type == IDENTIFIER)
+  {
     Node *identifier_node = malloc(sizeof(Node));
     identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
     current_node->left = identifier_node;
-  } else {
+  }
+  else
+  {
     printf("ERROR: expected int or identifier\n");
     exit(1);
   }
   current_token++;
   current_token++;
-  while(current_token->type == INT || current_token->type == IDENTIFIER || current_token->type == OPERATOR){
-    if(current_token->type == INT || current_token->type == IDENTIFIER){
-      printf("CURRENT TOKEN 3: %s\n", current_token->value);
-      if((current_token->type != INT && current_token->type != IDENTIFIER) || current_token == NULL){
+  while (current_token->type == INT || current_token->type == IDENTIFIER || current_token->type == OPERATOR)
+  {
+    if (current_token->type == INT || current_token->type == IDENTIFIER)
+    {
+      if ((current_token->type != INT && current_token->type != IDENTIFIER) || current_token == NULL)
+      {
         printf("Syntax Error hERE\n");
         exit(1);
       }
-      printf("AJSDKLJASLK current token: %s\n", current_token->value);
       current_token++;
-      if(current_token->type != OPERATOR){
+      if (current_token->type != OPERATOR)
+      {
         current_token--;
-        if(current_token->type == INT){
+        if (current_token->type == INT)
+        {
           Node *second_expr_node = malloc(sizeof(Node));
           second_expr_node = init_node(second_expr_node, current_token->value, INT);
           current_node->right = second_expr_node;
-        } else if(current_token->type == IDENTIFIER){
+        }
+        else if (current_token->type == IDENTIFIER)
+        {
           Node *second_identifier_node = malloc(sizeof(Node));
           second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
           current_node->right = second_identifier_node;
-        } else {
+        }
+        else
+        {
           printf("ERROR: Expected Integer or Identifier\n");
           exit(1);
         }
       }
     }
-    if(current_token->type == OPERATOR){
+    if (current_token->type == OPERATOR)
+    {
       Node *next_oper_node = malloc(sizeof(Node));
       next_oper_node = init_node(next_oper_node, current_token->value, OPERATOR);
       current_node->right = next_oper_node;
       current_node = next_oper_node;
       current_token--;
-      if(current_token->type == INT){
+      if (current_token->type == INT)
+      {
         Node *second_expr_node = malloc(sizeof(Node));
         second_expr_node = init_node(second_expr_node, current_token->value, INT);
         current_node->left = second_expr_node;
-      } else if(current_token->type == IDENTIFIER){
+      }
+      else if (current_token->type == IDENTIFIER)
+      {
         Node *second_identifier_node = malloc(sizeof(Node));
         second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
         current_node->left = second_identifier_node;
-      } else {
+      }
+      else
+      {
         printf("ERROR: Expected IDENTIFIER or INT\n");
         exit(1);
       }
-      current_token++; 
+      current_token++;
     }
     current_token++;
   }
   return current_token;
 }
 
-void handle_exit_syscall(Node *root, Token *current_token, Node *current){
-    Node *exit_node = malloc(sizeof(Node));
-    exit_node = init_node(exit_node, current_token->value, KEYWORD);
-    current->right = exit_node;
-    current = exit_node;
+Node *handle_exit_syscall(Node *root, Token *current_token, Node *current)
+{
+  Node *exit_node = malloc(sizeof(Node));
+  exit_node = init_node(exit_node, current_token->value, KEYWORD);
+  current->right = exit_node;
+  current = exit_node;
+  current_token++;
+  if (current_token->type == END_OF_TOKENS)
+  {
+    print_error("Invalid Syntax on OPEN", current_token->line_num);
+  }
+  if (strcmp(current_token->value, "(") == 0 && current_token->type == SEPARATOR)
+  {
+    Node *open_paren_node = malloc(sizeof(Node));
+    open_paren_node = init_node(open_paren_node, current_token->value, SEPARATOR);
+    current->left = open_paren_node;
     current_token++;
-    if(current_token->type == END_OF_TOKENS){
-      print_error("Invalid Syntax on OPEN");
+    if (current_token->type == END_OF_TOKENS)
+    {
+      print_error("Invalid Syntax on INT", current_token->line_num);
     }
-    if(strcmp(current_token->value, "(") == 0 && current_token->type == SEPARATOR){
-      Node *open_paren_node = malloc(sizeof(Node));
-      open_paren_node = init_node(open_paren_node, current_token->value, SEPARATOR);
-      current->left = open_paren_node;
+    if (current_token->type == INT || current_token->type == IDENTIFIER)
+    {
       current_token++;
-      if(current_token->type == END_OF_TOKENS){
-        print_error("Invalid Syntax on INT");
+      if (current_token->type == OPERATOR && current_token != NULL)
+      {
+        current_token = generate_operation_nodes(current_token, current);
+        current_token--;
       }
-      if(current_token->type == INT || current_token->type == IDENTIFIER){
-        current_token++;
-        if(current_token->type == OPERATOR && current_token != NULL){
-          current_token = generate_operation_nodes(current_token, current);
-          current_token--;
-        } else {
-          current_token--;
-          Node *expr_node = malloc(sizeof(Node));
-          expr_node = init_node(expr_node, current_token->value, current_token->type);
-          current->left->left = expr_node;
-        }
-        current_token++;
-        printf("current token: %s\n", current_token->value);
-        if(current_token->type == END_OF_TOKENS){
-          print_error("Invalid Syntax on cLOSE");
-        }
-        if(strcmp(current_token->value, ")") == 0 && current_token->type == SEPARATOR && current_token->type != END_OF_TOKENS){
-          Node *close_paren_node = malloc(sizeof(Node));
-          close_paren_node = init_node(close_paren_node, current_token->value, SEPARATOR);
-          current->left->right = close_paren_node;
-          current_token++;
-          if(current_token->type == END_OF_TOKENS){
-            print_error("Invalid Syntax on SEMI");
-          }
-          if(strcmp(current_token->value, ";") == 0 && current_token->type == SEPARATOR){
-            Node *semi_node = malloc(sizeof(Node));
-            semi_node = init_node(semi_node, current_token->value, SEPARATOR);
-            current->right = semi_node;
-          } else {
-            print_error("Invalid Syntax on SEMI");
-          }
-        } else {
-            print_error("Invalid Syntax on CLOSE");
-        }
-      } else {
-        print_error("Invalid Syntax INT");
+      else
+      {
+        current_token--;
+        Node *expr_node = malloc(sizeof(Node));
+        expr_node = init_node(expr_node, current_token->value, current_token->type);
+        current->left->left = expr_node;
       }
-  } else {
-    print_error("Invalid Syntax OPEN");
+      current_token++;
+      if (current_token->type == END_OF_TOKENS)
+      {
+        print_error("Invalid Syntax on cLOSE", current_token->line_num);
+      }
+      if (strcmp(current_token->value, ")") == 0 && current_token->type == SEPARATOR && current_token->type != END_OF_TOKENS)
+      {
+        Node *close_paren_node = malloc(sizeof(Node));
+        close_paren_node = init_node(close_paren_node, current_token->value, SEPARATOR);
+        current->left->right = close_paren_node;
+        current_token++;
+        if (current_token->type == END_OF_TOKENS)
+        {
+          print_error("Invalid Syntax on SEMI", current_token->line_num);
+        }
+        if (strcmp(current_token->value, ";") == 0 && current_token->type == SEPARATOR)
+        {
+          Node *semi_node = malloc(sizeof(Node));
+          semi_node = init_node(semi_node, current_token->value, SEPARATOR);
+          current->right = semi_node;
+          current = semi_node;
+        }
+        else
+        {
+          print_error("Invalid Syntax on SEMI", current_token->line_num);
+        }
+      }
+      else
+      {
+        print_error("Invalid Syntax on CLOSE", current_token->line_num);
+      }
+    }
+    else
+    {
+      print_error("Invalid Syntax INT", current_token->line_num);
+    }
   }
-
+  else
+  {
+    print_error("Invalid Syntax OPEN", current_token->line_num);
+  }
+  return current;
 }
 
-void handle_token_errors(char *error_text, Token *current_token, TokenType type){
-  if(current_token->type == END_OF_TOKENS || current_token->type != type){
-    print_error(error_text);
+void handle_token_errors(char *error_text, Token *current_token, TokenType type)
+{
+  if (current_token->type == END_OF_TOKENS || current_token->type != type)
+  {
+    print_error(error_text, current_token->line_num);
   }
 }
 
-Node *create_variable_reusage(Token *current_token, Node *current){
+Node *create_variable_reusage(Token *current_token, Node *current)
+{
   Node *main_identifier_node = malloc(sizeof(Node));
   main_identifier_node = init_node(main_identifier_node, current_token->value, IDENTIFIER);
   current->left = main_identifier_node;
@@ -189,9 +275,11 @@ Node *create_variable_reusage(Token *current_token, Node *current){
 
   handle_token_errors("Invalid syntax after idenfitier", current_token, OPERATOR);
 
-  if(current_token->type == OPERATOR){
-    if(strcmp(current_token->value, "=") != 0){
-      print_error("Invalid Variable Syntax on =");
+  if (current_token->type == OPERATOR)
+  {
+    if (strcmp(current_token->value, "=") != 0)
+    {
+      print_error("Invalid Variable Syntax on =", current_token->line_num);
     }
     Node *equals_node = malloc(sizeof(Node));
     equals_node = init_node(equals_node, current_token->value, OPERATOR);
@@ -199,37 +287,43 @@ Node *create_variable_reusage(Token *current_token, Node *current){
     current = equals_node;
     current_token++;
   }
-  if(current_token->type == END_OF_TOKENS || (current_token->type != INT && current_token->type != IDENTIFIER)){
-    print_error("Invalid Syntax After Equals");
+  if (current_token->type == END_OF_TOKENS || (current_token->type != INT && current_token->type != IDENTIFIER))
+  {
+    print_error("Invalid Syntax After Equals", current_token->line_num);
   }
 
   current_token++;
-  printf("Token in variable parse: %s\n", current_token->value);
-  if(current_token->type == OPERATOR){
+  if (current_token->type == OPERATOR)
+  {
     Node *oper_node = malloc(sizeof(Node));
     oper_node = init_node(oper_node, current_token->value, OPERATOR);
     current->left = oper_node;
     current = oper_node;
     current_token--;
-    if(current_token->type == INT){
+    if (current_token->type == INT)
+    {
       Node *expr_node = malloc(sizeof(Node));
       expr_node = init_node(expr_node, current_token->value, INT);
       oper_node->left = expr_node;
       current_token++;
       current_token++;
-    } else if(current_token->type == IDENTIFIER){
+    }
+    else if (current_token->type == IDENTIFIER)
+    {
       Node *identifier_node = malloc(sizeof(Node));
       identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
       oper_node->left = identifier_node;
       current_token++;
       current_token++;
-    } else {
-      print_error("ERROR: Expected IDENTIFIER or INT");
+    }
+    else
+    {
+      print_error("ERROR: Expected IDENTIFIER or INT", current_token->line_num);
     }
     current_token++;
-    printf("CURRENST TOKEN: %s\n", current_token->value);
 
-    if(current_token->type == OPERATOR){
+    if (current_token->type == OPERATOR)
+    {
       Node *oper_node = malloc(sizeof(Node));
       oper_node = init_node(oper_node, current_token->value, OPERATOR);
       current->right = oper_node;
@@ -237,43 +331,57 @@ Node *create_variable_reusage(Token *current_token, Node *current){
       int operation = 1;
       current_token--;
       current_token--;
-      while(operation){
+      while (operation)
+      {
         current_token++;
-        if(current_token->type == INT){
+        if (current_token->type == INT)
+        {
           Node *expr_node = malloc(sizeof(Node));
           expr_node = init_node(expr_node, current_token->value, INT);
           current->left = expr_node;
-        } else if(current_token->type == IDENTIFIER){
+        }
+        else if (current_token->type == IDENTIFIER)
+        {
           Node *identifier_node = malloc(sizeof(Node));
           identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
           current->left = identifier_node;
-        } else {
-          printf("ERROR: Unexpected Token\n");
+        }
+        else
+        {
+          printf("ERROR: Unexpected Token\n", current_token->line_num);
           exit(1);
         }
         current_token++;
-        if(current_token->type == OPERATOR){
+        if (current_token->type == OPERATOR)
+        {
           current_token++;
           current_token++;
-          if(current_token->type != OPERATOR){
+          if (current_token->type != OPERATOR)
+          {
             current_token--;
-            if(current_token->type == INT){
-              printf("CURR TOKEN! %s\n", current_token->value);
+            if (current_token->type == INT)
+            {
               Node *expr_node = malloc(sizeof(Node));
               expr_node = init_node(expr_node, current_token->value, INT);
               current->right = expr_node;
               current_token++;
-            } else if(current_token->type == IDENTIFIER){
+            }
+            else if (current_token->type == IDENTIFIER)
+            {
               Node *identifier_node = malloc(sizeof(Node));
               identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
               current->right = identifier_node;
               current_token++;
-            } else {
+            }
+            else
+            {
               printf("ERROR: UNRECOGNIZED TOKEN!\n");
               exit(1);
             }
             operation = 0;
-          } else {
+          }
+          else
+          {
             current_token--;
             current_token--;
             Node *oper_node = malloc(sizeof(Node));
@@ -281,33 +389,43 @@ Node *create_variable_reusage(Token *current_token, Node *current){
             current->right = oper_node;
             current = oper_node;
           }
-        } else {
+        }
+        else
+        {
           operation = 0;
         }
       }
-    } else {
+    }
+    else
+    {
       current_token--;
-      printf("CORRENT TOKEN: %s\n", current_token->value);
-      if(current_token->type == INT){
+      if (current_token->type == INT)
+      {
         Node *expr_node = malloc(sizeof(Node));
         expr_node = init_node(expr_node, current_token->value, INT);
         oper_node->right = expr_node;
-      } else if(current_token->type == IDENTIFIER){
+      }
+      else if (current_token->type == IDENTIFIER)
+      {
         Node *identifier_node = malloc(sizeof(Node));
         identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
         oper_node->right = identifier_node;
       }
       current_token++;
     }
-  } else {
+  }
+  else
+  {
     current_token--;
-    if(current_token->type == INT){
-      printf("INTAGET\n");
+    if (current_token->type == INT)
+    {
       Node *expr_node = malloc(sizeof(Node));
       expr_node = init_node(expr_node, current_token->value, INT);
       current->left = expr_node;
       current_token++;
-    } else if(current_token->type == IDENTIFIER){
+    }
+    else if (current_token->type == IDENTIFIER)
+    {
       Node *identifier_node = malloc(sizeof(Node));
       identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
       current->left = identifier_node;
@@ -317,8 +435,8 @@ Node *create_variable_reusage(Token *current_token, Node *current){
   handle_token_errors("Invalid Syntax After Expression", current_token, SEPARATOR);
 
   current = main_identifier_node;
-  printf("CURRRR TOKEN: %s\n", current_token->value);
-  if(strcmp(current_token->value, ";") == 0){
+  if (strcmp(current_token->value, ";") == 0)
+  {
     Node *semi_node = malloc(sizeof(Node));
     semi_node = init_node(semi_node, current_token->value, SEPARATOR);
     current->right = semi_node;
@@ -327,15 +445,16 @@ Node *create_variable_reusage(Token *current_token, Node *current){
   return current;
 }
 
-
-Node *create_variables(Token *current_token, Node *current){
+Node *create_variables(Token *current_token, Node *current)
+{
   Node *var_node = malloc(sizeof(Node));
   var_node = init_node(var_node, current_token->value, KEYWORD);
   current->left = var_node;
   current = var_node;
   current_token++;
   handle_token_errors("Invalid syntax after INT", current_token, IDENTIFIER);
-  if(current_token->type == IDENTIFIER){
+  if (current_token->type == IDENTIFIER)
+  {
     Node *identifier_node = malloc(sizeof(Node));
     identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
     current->left = identifier_node;
@@ -344,9 +463,11 @@ Node *create_variables(Token *current_token, Node *current){
   }
   handle_token_errors("Invalid Syntax After Identifier", current_token, OPERATOR);
 
-  if(current_token->type == OPERATOR){
-    if(strcmp(current_token->value, "=") != 0){
-      print_error("Invalid Variable Syntax on =");
+  if (current_token->type == OPERATOR)
+  {
+    if (strcmp(current_token->value, "=") != 0)
+    {
+      print_error("Invalid Variable Syntax on =", current_token->line_num);
     }
     Node *equals_node = malloc(sizeof(Node));
     equals_node = init_node(equals_node, current_token->value, OPERATOR);
@@ -354,37 +475,43 @@ Node *create_variables(Token *current_token, Node *current){
     current = equals_node;
     current_token++;
   }
-  if(current_token->type == END_OF_TOKENS || (current_token->type != INT && current_token->type != IDENTIFIER)){
-    print_error("Invalid Syntax After Equals");
+  if (current_token->type == END_OF_TOKENS || (current_token->type != INT && current_token->type != IDENTIFIER))
+  {
+    print_error("Invalid Syntax After Equals", current_token->line_num);
   }
 
   current_token++;
-  printf("CURRRRRRRRRRRRR: %s\n", current_token->value);
-  if(current_token->type == OPERATOR){
+  if (current_token->type == OPERATOR)
+  {
     Node *oper_node = malloc(sizeof(Node));
     oper_node = init_node(oper_node, current_token->value, OPERATOR);
     current->left = oper_node;
     current = oper_node;
     current_token--;
-    if(current_token->type == INT){
+    if (current_token->type == INT)
+    {
       Node *expr_node = malloc(sizeof(Node));
       expr_node = init_node(expr_node, current_token->value, INT);
       oper_node->left = expr_node;
       current_token++;
       current_token++;
-    } else if(current_token->type == IDENTIFIER){
+    }
+    else if (current_token->type == IDENTIFIER)
+    {
       Node *identifier_node = malloc(sizeof(Node));
       identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
       oper_node->left = identifier_node;
       current_token++;
       current_token++;
-    } else {
-      print_error("ERROR: Expected IDENTIFIER or INT");
+    }
+    else
+    {
+      print_error("ERROR: Expected IDENTIFIER or INT", current_token->line_num);
     }
     current_token++;
-    printf("CURRENST TOKEN: %s\n", current_token->value);
 
-    if(current_token->type == OPERATOR){
+    if (current_token->type == OPERATOR)
+    {
       Node *oper_node = malloc(sizeof(Node));
       oper_node = init_node(oper_node, current_token->value, OPERATOR);
       current->right = oper_node;
@@ -392,43 +519,57 @@ Node *create_variables(Token *current_token, Node *current){
       int operation = 1;
       current_token--;
       current_token--;
-      while(operation){
+      while (operation)
+      {
         current_token++;
-        if(current_token->type == INT){
+        if (current_token->type == INT)
+        {
           Node *expr_node = malloc(sizeof(Node));
           expr_node = init_node(expr_node, current_token->value, INT);
           current->left = expr_node;
-        } else if(current_token->type == IDENTIFIER){
+        }
+        else if (current_token->type == IDENTIFIER)
+        {
           Node *identifier_node = malloc(sizeof(Node));
           identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
           current->left = identifier_node;
-        } else {
+        }
+        else
+        {
           printf("ERROR: Unexpected Token\n");
           exit(1);
         }
         current_token++;
-        if(current_token->type == OPERATOR){
+        if (current_token->type == OPERATOR)
+        {
           current_token++;
           current_token++;
-          if(current_token->type != OPERATOR){
+          if (current_token->type != OPERATOR)
+          {
             current_token--;
-            if(current_token->type == INT){
-              printf("CURR TOKEN! %s\n", current_token->value);
+            if (current_token->type == INT)
+            {
               Node *expr_node = malloc(sizeof(Node));
               expr_node = init_node(expr_node, current_token->value, INT);
               current->right = expr_node;
               current_token++;
-            } else if(current_token->type == IDENTIFIER){
+            }
+            else if (current_token->type == IDENTIFIER)
+            {
               Node *identifier_node = malloc(sizeof(Node));
               identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
               current->right = identifier_node;
               current_token++;
-            } else {
+            }
+            else
+            {
               printf("ERROR: UNRECOGNIZED TOKEN!\n");
               exit(1);
             }
             operation = 0;
-          } else {
+          }
+          else
+          {
             current_token--;
             current_token--;
             Node *oper_node = malloc(sizeof(Node));
@@ -436,32 +577,43 @@ Node *create_variables(Token *current_token, Node *current){
             current->right = oper_node;
             current = oper_node;
           }
-        } else {
+        }
+        else
+        {
           operation = 0;
         }
       }
-    } else {
+    }
+    else
+    {
       current_token--;
-      printf("CORRENT TOKEN: %s\n", current_token->value);
-      if(current_token->type == INT){
+      if (current_token->type == INT)
+      {
         Node *expr_node = malloc(sizeof(Node));
         expr_node = init_node(expr_node, current_token->value, INT);
         oper_node->right = expr_node;
-      } else if(current_token->type == IDENTIFIER){
+      }
+      else if (current_token->type == IDENTIFIER)
+      {
         Node *identifier_node = malloc(sizeof(Node));
         identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
         oper_node->right = identifier_node;
       }
       current_token++;
     }
-  } else {
+  }
+  else
+  {
     current_token--;
-    if(current_token->type == INT){
+    if (current_token->type == INT)
+    {
       Node *expr_node = malloc(sizeof(Node));
       expr_node = init_node(expr_node, current_token->value, INT);
       current->left = expr_node;
       current_token++;
-    } else if(current_token->type == IDENTIFIER){
+    }
+    else if (current_token->type == IDENTIFIER)
+    {
       Node *identifier_node = malloc(sizeof(Node));
       identifier_node = init_node(identifier_node, current_token->value, IDENTIFIER);
       current->left = identifier_node;
@@ -469,15 +621,15 @@ Node *create_variables(Token *current_token, Node *current){
     }
   }
 
-  //if(current_token->type == OPERATOR){
-  //  current_token = generate_operation_nodes(current_token, current);
-  //}
+  // if(current_token->type == OPERATOR){
+  //   current_token = generate_operation_nodes(current_token, current);
+  // }
 
   handle_token_errors("Invalid Syntax After Expression", current_token, SEPARATOR);
 
   current = var_node;
-  printf("CURRRR TOKEN: %s\n", current_token->value);
-  if(strcmp(current_token->value, ";") == 0){
+  if (strcmp(current_token->value, ";") == 0)
+  {
     Node *semi_node = malloc(sizeof(Node));
     semi_node = init_node(semi_node, current_token->value, SEPARATOR);
     current->right = semi_node;
@@ -486,7 +638,300 @@ Node *create_variables(Token *current_token, Node *current){
   return current;
 }
 
-Node *parser(Token *tokens){
+Token *generate_if_operation_nodes(Token *current_token, Node *current_node)
+{
+  Node *oper_node = malloc(sizeof(Node));
+  oper_node = init_node(oper_node, current_token->value, OPERATOR);
+  current_node->left->left = oper_node;
+  current_node = oper_node;
+  current_token--;
+
+  Node *expr_node = malloc(sizeof(Node));
+  expr_node = init_node(expr_node, current_token->value, current_token->type);
+  current_node->left = expr_node;
+
+  current_token++;
+  current_token++;
+  while (current_token->type == INT || current_token->type == IDENTIFIER || current_token->type == OPERATOR)
+  {
+    if (current_token->type == INT || current_token->type == IDENTIFIER)
+    {
+      if ((current_token->type != INT && current_token->type != IDENTIFIER) || current_token == NULL)
+      {
+        exit(1);
+      }
+      current_token++;
+      if (current_token->type != OPERATOR || strcmp(current_token->value, "=") == 0)
+      {
+        current_token--;
+        if (current_token->type == INT)
+        {
+          Node *second_expr_node = malloc(sizeof(Node));
+          second_expr_node = init_node(second_expr_node, current_token->value, INT);
+          current_node->right = second_expr_node;
+        }
+        else if (current_token->type == IDENTIFIER)
+        {
+          Node *second_identifier_node = malloc(sizeof(Node));
+          second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
+          current_node->right = second_identifier_node;
+        }
+        else
+        {
+          printf("ERROR: Expected Integer or Identifier\n");
+          exit(1);
+        }
+      }
+    }
+    if (strcmp(current_token->value, "=") == 0)
+    {
+      break;
+    }
+    else if (current_token->type == OPERATOR)
+    {
+      Node *next_oper_node = malloc(sizeof(Node));
+      next_oper_node = init_node(next_oper_node, current_token->value, OPERATOR);
+      current_node->right = next_oper_node;
+      current_node = next_oper_node;
+      current_token--;
+      if (current_token->type == INT)
+      {
+        Node *second_expr_node = malloc(sizeof(Node));
+        second_expr_node = init_node(second_expr_node, current_token->value, INT);
+        current_node->left = second_expr_node;
+      }
+      else if (current_token->type == IDENTIFIER)
+      {
+        Node *second_identifier_node = malloc(sizeof(Node));
+        second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
+        current_node->left = second_identifier_node;
+      }
+      else
+      {
+        printf("ERROR: Expected IDENTIFIER or INT\n");
+        exit(1);
+      }
+      current_token++;
+    }
+    current_token++;
+  }
+  return current_token;
+}
+
+Token *generate_if_operation_nodes_right(Token *current_token, Node *current_node)
+{
+  Node *oper_node = malloc(sizeof(Node));
+  oper_node = init_node(oper_node, current_token->value, OPERATOR);
+  current_node->left->right = oper_node;
+  current_node = oper_node;
+  current_token--;
+
+  Node *expr_node = malloc(sizeof(Node));
+  expr_node = init_node(expr_node, current_token->value, current_token->type);
+  current_node->left = expr_node;
+
+  current_token++;
+  current_token++;
+  while (current_token->type == INT || current_token->type == IDENTIFIER || current_token->type == OPERATOR)
+  {
+    if (current_token->type == INT || current_token->type == IDENTIFIER)
+    {
+      if ((current_token->type != INT && current_token->type != IDENTIFIER) || current_token == NULL)
+      {
+        printf("Syntax Error hERE\n");
+        exit(1);
+      }
+      current_token++;
+      if (current_token->type != OPERATOR || strcmp(current_token->value, "=") == 0)
+      {
+        current_token--;
+        if (current_token->type == INT)
+        {
+          Node *second_expr_node = malloc(sizeof(Node));
+          second_expr_node = init_node(second_expr_node, current_token->value, INT);
+          current_node->right = second_expr_node;
+        }
+        else if (current_token->type == IDENTIFIER)
+        {
+          Node *second_identifier_node = malloc(sizeof(Node));
+          second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
+          current_node->right = second_identifier_node;
+        }
+        else
+        {
+          printf("ERROR: Expected Integer or Identifier\n");
+          exit(1);
+        }
+      }
+    }
+    if (strcmp(current_token->value, "=") == 0)
+    {
+      break;
+    }
+    else if (current_token->type == OPERATOR)
+    {
+      Node *next_oper_node = malloc(sizeof(Node));
+      next_oper_node = init_node(next_oper_node, current_token->value, OPERATOR);
+      current_node->right = next_oper_node;
+      current_node = next_oper_node;
+      current_token--;
+      if (current_token->type == INT)
+      {
+        Node *second_expr_node = malloc(sizeof(Node));
+        second_expr_node = init_node(second_expr_node, current_token->value, INT);
+        current_node->left = second_expr_node;
+      }
+      else if (current_token->type == IDENTIFIER)
+      {
+        Node *second_identifier_node = malloc(sizeof(Node));
+        second_identifier_node = init_node(second_identifier_node, current_token->value, IDENTIFIER);
+        current_node->left = second_identifier_node;
+      }
+      else
+      {
+        printf("ERROR: Expected IDENTIFIER or INT\n");
+        exit(1);
+      }
+      current_token++;
+    }
+    current_token++;
+  }
+  return current_token;
+}
+
+Node *create_if_statement(Token *current_token, Node *current)
+{
+  Node *if_node = malloc(sizeof(Node));
+  if_node = init_node(if_node, current_token->value, current_token->type);
+  current->left = if_node;
+  current = if_node;
+  current_token++;
+
+  handle_token_errors("ERROR: Expected (", current_token, SEPARATOR);
+
+  Node *open_paren_node = malloc(sizeof(Node));
+  open_paren_node = init_node(open_paren_node, current_token->value, SEPARATOR);
+  current->left = open_paren_node;
+  current = open_paren_node;
+
+  current_token++;
+
+  if (current_token->type != IDENTIFIER && current_token->type != INT)
+  {
+    printf("ERROR: Expected Identifier or INT\n");
+    exit(1);
+  }
+
+  while (current_token->type != END_OF_TOKENS && current_token->type != COMP)
+  {
+    current_token++;
+  }
+
+  if (current_token->type != COMP)
+  {
+    printf("ERROR: Expected =\n");
+    exit(1);
+  }
+  Node *comp_node = malloc(sizeof(Node));
+  comp_node = init_node(comp_node, current_token->value, current_token->type);
+  open_paren_node->left = comp_node;
+
+  while (current_token->type != SEPARATOR)
+  {
+    current_token--;
+  }
+
+  current_token++;
+  current_token++;
+
+  if (current_token->type != OPERATOR || current_token->type == COMP)
+  {
+    current_token--;
+    Node *expr_node = malloc(sizeof(Node));
+    expr_node = init_node(expr_node, current_token->value, current_token->type);
+    comp_node->left = expr_node;
+  }
+  else
+  {
+    current_token = generate_if_operation_nodes(current_token, current);
+  }
+
+  current_token++;
+  while ((current_token->type != END_OF_TOKENS && current_token->type != OPERATOR && current_token->type != SEPARATOR) || strcmp(current_token->value, "=") == 0)
+  {
+    current_token++;
+  }
+  if (current_token->type == SEPARATOR)
+  {
+    current_token--;
+    Node *expr_node = malloc(sizeof(Node));
+    expr_node = init_node(expr_node, current_token->value, current_token->type);
+    comp_node->right = expr_node;
+  }
+  else
+  {
+    current_token = generate_if_operation_nodes_right(current_token, current);
+  }
+
+  Node *close_paren_node = malloc(sizeof(Node));
+  close_paren_node = init_node(close_paren_node, ")", SEPARATOR);
+  open_paren_node->right = close_paren_node;
+  current = close_paren_node;
+
+  return current;
+}
+
+Node *handle_write_node(Token *current_token, Node *current)
+{
+  Node *write_node = NULL;
+  write_node = init_node(write_node, current_token->value, current_token->type);
+  current->left = write_node;
+  current = write_node;
+
+  current_token++;
+
+  handle_token_errors("ERROR: Expected (", current_token, SEPARATOR);
+
+  current_token++;
+  if (current_token->type != STRING && current_token->type != IDENTIFIER)
+  {
+    handle_token_errors("ERROR: Expected String Literal", current_token, STRING);
+  }
+
+  Node *string_node = NULL;
+  string_node = init_node(string_node, current_token->value, current_token->type);
+  current->left = string_node;
+
+  current_token++;
+
+  handle_token_errors("ERROR: Expected ,", current_token, SEPARATOR);
+
+  current_token++;
+
+  Node *number_node = NULL;
+  number_node = init_node(number_node, current_token->value, current_token->type);
+  current->right = number_node;
+
+  current_token++;
+
+  handle_token_errors("ERROR: Expected )", current_token, SEPARATOR);
+
+  current_token++;
+
+  if (strcmp(current_token->value, ";") != 0)
+  {
+    print_error("ERROR: Expected ;", current_token->line_num);
+  }
+
+  Node *semi_node = NULL;
+  semi_node = init_node(semi_node, current_token->value, current_token->type);
+  number_node->right = semi_node;
+  current = semi_node;
+  return current;
+}
+
+Node *parser(Token *tokens)
+{
   Token *current_token = &tokens[0];
   Node *root = malloc(sizeof(Node));
   root = init_node(root, "PROGRAM", BEGINNING);
@@ -494,81 +939,90 @@ Node *parser(Token *tokens){
   Node *current = root;
 
   Node *open_curly = malloc(sizeof(Node));
-  Node *close_curly = malloc(sizeof(Node));
+  // Node *close_curly = malloc(sizeof(Node));
 
-  while(current_token->type != END_OF_TOKENS){
-    if(current == NULL){
+  curly_stack *stack = malloc(sizeof(curly_stack));
+
+  while (current_token->type != END_OF_TOKENS)
+  {
+    if (current == NULL)
+    {
       break;
     }
-    switch(current_token->type){
-      case KEYWORD:
-        printf("TOKEN VALUE: %s\n", current_token->value);
-        if(strcmp(current_token->value, "EXIT") == 0){
-          handle_exit_syscall(root, current_token, current);
+    switch (current_token->type)
+    {
+    case KEYWORD:
+      if (strcmp(current_token->value, "EXIT") == 0)
+      {
+        current = handle_exit_syscall(root, current_token, current);
+      }
+      else if (strcmp(current_token->value, "INT") == 0)
+      {
+        current = create_variables(current_token, current);
+      }
+      else if (strcmp(current_token->value, "IF") == 0)
+      {
+        current = create_if_statement(current_token, current);
+      }
+      else if (strcmp(current_token->value, "WHILE") == 0)
+      {
+        current = create_if_statement(current_token, current);
+      }
+      else if (strcmp(current_token->value, "WRITE") == 0)
+      {
+        current = handle_write_node(current_token, current);
+      }
+      break;
+    case SEPARATOR:
+      if (strcmp(current_token->value, "{") == 0)
+      {
+        Token *temp = current_token;
+        open_curly = init_node(open_curly, temp->value, SEPARATOR);
+        current->left = open_curly;
+        current = open_curly;
+        push_curly(stack, open_curly);
+        current = peek_curly(stack);
+      }
+      if (strcmp(current_token->value, "}") == 0)
+      {
+        Node *close_curly = malloc(sizeof(Node));
+        open_curly = pop_curly(stack);
+        if (open_curly == NULL)
+        {
+          printf("ERROR: Expected Open Parenthesis!\n");
+          exit(1);
         }
-        if(strcmp(current_token->value, "INT") == 0){
-          current = create_variables(current_token, current);
-        }
-        break;
-      case SEPARATOR:
-        if(strcmp(current_token->value, "{") == 0){
-          Token *temp = current_token;
-          open_curly = init_node(open_curly, temp->value, SEPARATOR);
-          current->left = open_curly;
-          current = open_curly;
-          int curly_count = 0;
-          int close_curly_count = 0;
-          close_curly = init_node(close_curly, "}", SEPARATOR);
-          current->right = close_curly;
-          temp = &tokens[0];
-          //temp++;
-          while(temp->type != END_OF_TOKENS){
-            if(temp == NULL){
-              printf("ERROR: Expected }\n");
-              exit(1);
-            }
-            if(temp->type == SEPARATOR){
-              if(strcmp(temp->value, "{") == 0){
-                curly_count++;
-              }
-              if(strcmp(temp->value, "}") == 0){
-                close_curly_count++;
-              }
-            }
-            temp++;
-          }
-          if(curly_count != close_curly_count){
-            printf("%d:%d\n", curly_count, close_curly_count);
-            printf("ERROR: Expected curly brace\n");
-            exit(1);
-          }
-          //
-        }
-        if(strcmp(current_token->value, "}") == 0){
-          current = close_curly;
-        }
-        break; 
-      case OPERATOR:
-        break;
-      case INT:
-        printf("INTEGER\n");
-        break;
-      case IDENTIFIER:
-        current_token--;
-        if(current_token->type == SEPARATOR && strcmp(current_token->value, ";") == 0){
-          current_token++;
-          current = create_variable_reusage(current_token, current);
-        } else {
-          current_token++;
-        }
-        break;
-      case BEGINNING:
-        break;
-      case END_OF_TOKENS:
-        break;
+        close_curly = init_node(close_curly, current_token->value, current_token->type);
+        current->right = close_curly;
+        current = close_curly;
+      }
+      break;
+    case OPERATOR:
+      break;
+    case INT:
+      break;
+    case IDENTIFIER:
+      current_token--;
+      if (current_token->type == SEPARATOR && ((strcmp(current_token->value, ";") == 0) || (strcmp(current_token->value, "}") == 0) || (strcmp(current_token->value, "{") == 0)))
+      {
+        current_token++;
+        current = create_variable_reusage(current_token, current);
+      }
+      else
+      {
+        current_token++;
+      }
+      break;
+    case STRING:
+      break;
+    case COMP:
+      break;
+    case BEGINNING:
+      break;
+    case END_OF_TOKENS:
+      break;
     }
     current_token++;
   }
-  print_tree(root, 0, "root");
   return root;
 }
