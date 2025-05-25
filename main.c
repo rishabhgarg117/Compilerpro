@@ -29,6 +29,12 @@ int main(int argc, char *argv[])
 
   Node *test = parser(tokens);
 
+  // Save the parse tree to a file
+  char *parse_tree_filename = malloc(sizeof(char) * 32);
+  sprintf(parse_tree_filename, "%s_parse_tree.txt", argv[2]);
+  save_parse_tree(test, parse_tree_filename);
+  free(parse_tree_filename);
+
   generate_code(test, "generated.asm");
   FILE *assembly_file = fopen("generated.asm", "r");
   if (!assembly_file)

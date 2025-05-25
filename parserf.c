@@ -930,6 +930,43 @@ Node *handle_write_node(Token *current_token, Node *current)
   return current;
 }
 
+void print_tree_to_file(Node *node, int indent, char *identifier, FILE *file)
+{
+  if (node == NULL)
+  {
+    return;
+  }
+  for (int i = 0; i < indent; i++)
+  {
+    fprintf(file, " ");
+  }
+  fprintf(file, "%s -> ", identifier);
+  for (size_t i = 0; node->value[i] != '\0'; i++)
+  {
+    fprintf(file, "%c", node->value[i]);
+  }
+  fprintf(file, "\n");
+  print_tree_to_file(node->left, indent + 1, "left", file);
+  print_tree_to_file(node->right, indent + 1, "right", file);
+}
+
+void save_parse_tree(Node *root, const char *filename)
+{
+  FILE *file = fopen(filename, "w");
+  if (!file)
+  {
+    printf("ERROR: Could not open file %s for writing parse tree\n", filename);
+    return;
+  }
+
+  fprintf(file, "=== EasyLang Parse Tree ===\n\n");
+  print_tree_to_file(root, 0, "root", file);
+  fprintf(file, "\n=== End of Parse Tree ===\n");
+
+  fclose(file);
+  printf("Parse tree saved to file: %s\n", filename);
+}
+
 Node *parser(Token *tokens)
 {
   Token *current_token = &tokens[0];
