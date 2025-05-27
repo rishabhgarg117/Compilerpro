@@ -4,3 +4,10 @@ generated.asm
 generated
 *.o
 *.asm
+program
+program_parse_tree.txt
+test
+test_parse_tree.txt
+while
+while_parse_tree.txt
+easy-lang
